@@ -110,5 +110,7 @@ def db_scan_func(name_in):
 name = name_list[0]
 ins_df, fig2, X_scaled = db_scan_func(name)
 
+ins_df.to_csv(f"{name}_insider_df")
+
 # fig2.show()
 # print(ins_df)

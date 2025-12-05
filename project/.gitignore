@@ -1,2 +1,3 @@
 # .gitignore
 .env
+project/data/organized_sec_xbrl_clean.csv
