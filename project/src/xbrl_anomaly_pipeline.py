@@ -121,8 +121,6 @@ def iso_for(coords_3d_in,cik_in):
 
 fig_if, anomaly_results, iso, X_iso  = iso_for(coords_3d, cik)
 
-anomaly_results.to_csv(f"{cik}_xlbr_anomaly_results.csv")
-
 ###############
 # SHAP
 ###############
@@ -155,5 +153,3 @@ def shap_explain_if(iso_model_in, X_in, cik_in, n_samples = 200):
     return shap_df
 
 shap_results = shap_explain_if(iso, X_iso, cik)
-
-shap_results.to_csv(f"{cik}_xlbr_shap_results.csv")
