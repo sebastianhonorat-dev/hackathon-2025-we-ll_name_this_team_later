@@ -73,22 +73,32 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Use a more professional system font stack */
     html, body, [data-testid="stApp"], [data-testid="stSidebar"] * {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
                      Roboto, Oxygen, Ubuntu, Cantarell,
                      "Open Sans", "Helvetica Neue", sans-serif;
     }
 
-    /* Optional: slightly tighten headings */
-    h1, h2, h3, h4 {
+    h1 {
+        font-weight: 650;
+        letter-spacing: 0.08em;
+        font-size: 3.4rem !important;   /* <<< make title bigger */
+        margin-top: 0.25rem !important;
+    }
+
+    h2, h3, h4 {
         font-weight: 600;
         letter-spacing: 0.02em;
+    }
+
+    .block-container {
+        padding-top: 1rem !important;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
 
 st.title("SECure AI")
 st.write("Issuer anomaly surveillance – XBRL & Form 4")
