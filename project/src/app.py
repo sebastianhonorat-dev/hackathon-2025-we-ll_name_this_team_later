@@ -186,11 +186,10 @@ def prepare_insider_data(ticker: str):
 
     # Build sub-dataframes per insider name, index = transactionDate
     ins_df = {
-        name: adj_df.loc[name].set_index("transactionDate")
-        for name in adj_df.index.unique()
+        name: df_in.set_index("transactionDate").copy()
+        for name, df_in in adj_df.groupby(adj_df.index)
     }
 
-    # Drop insiders with fewer than 7 rows
     ins_df = {
         name: df_in for name, df_in in ins_df.items() if df_in.shape[0] >= 7
     }
@@ -248,22 +247,36 @@ def run_dbscan_for_insider(name_in: str, log_dict: dict):
 # (same logic as your second script, just wrapped)
 # -------------------------------------------------------------------
 @st.cache_resource(show_spinner=False)
-def load_xbrl_log_data(csv_path: str = XBRL_CSV_PATH):
+def load_xbrl_log_data():
     """
-    Load your organized_sec_xbrl_clean.csv and apply the log transform
-    exactly as in your script. Returns:
-      - log_cik_group: dict[cik] -> log-transformed DataFrame
-      - cik_list: sorted list of CIKs
+    Load your organized_sec_xbrl_clean.csv and apply the log transform.
+    CIKs are normalized to int so they match the SEC ticker mapping.
+    Returns:
+      - log_cik_group: dict[int cik] -> log-transformed DataFrame
+      - cik_list: sorted list of CIK ints
     """
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(XBRL_CSV_PATH)
+
+    # 🔴 Normalize CIK to int (handles '000001750', '1750', etc.)
+    df["cik"] = (
+        df["cik"]
+        .astype(str)
+        .str.extract(r"(\d+)")[0]  # grab digits
+        .astype(int)
+    )
+
+    # MultiIndex on (cik, period)
     adj_df = df.set_index(["cik", "period"])
 
-    # Group per CIK
+    # Group per CIK (keys will be ints)
     cik_group = {}
     for cik in adj_df.index.get_level_values(0).unique():
-        cik_group[cik] = adj_df.loc[cik]
+        cik_int = int(cik)
+        cik_group[cik_int] = adj_df.loc[cik_int]
 
-    log_cik_group = {cik: df.copy() for cik, df in cik_group.items()}
+    # Your log-transform logic
+    epsilon = 10 ** -9
+    log_cik_group = {cik: df_cik.copy() for cik, df_cik in cik_group.items()}
 
     for cik, df_cik in log_cik_group.items():
         for col in df_cik.columns:
@@ -286,7 +299,7 @@ def load_xbrl_log_data(csv_path: str = XBRL_CSV_PATH):
                     abs(df_cik[col].loc[neg_mask]) + epsilon
                 )
 
-    cik_list = sorted(log_cik_group.keys())
+    cik_list = sorted(log_cik_group.keys())  # list of ints
     return log_cik_group, cik_list
 
 
@@ -503,8 +516,25 @@ with tab_fundamentals:
                 shap_df = shap_explain_if(
                     iso_model, iso_X_scaled, cik_key, log_cik_group
                 )
+
+            st.markdown("#### SHAP values (how anomalous each column was)")
             st.write("Showing first 100 rows:")
             st.dataframe(highlight_anomalies(shap_df.head(100)))
+
+            # ---- NEW: join in the underlying fundamentals ("raw" data) ----
+            st.markdown("#### Underlying fundamentals for these periods")
+
+            # log_cik_group[cik_key] has the feature values per Period
+            fundamentals_df = log_cik_group[cik_key].copy()
+
+            # anomaly_results has AnomalyLabel per Period (index = Period)
+            # make sure index aligns by Period
+            fundamentals_with_labels = fundamentals_df.join(
+                anomaly_results[["AnomalyLabel"]],
+                how="left"
+            )
+
+            st.dataframe(highlight_anomalies(fundamentals_with_labels))
 
 # ------------------------------ INSIDERS TAB ------------------------
 with tab_insiders:
