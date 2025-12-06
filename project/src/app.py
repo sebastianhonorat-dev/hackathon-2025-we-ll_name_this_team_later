@@ -98,7 +98,7 @@ FINNHUB_API_KEY = "d4nj2vhr01qk2nuc6b20d4nj2vhr01qk2nuc6b2g"
 finnhub_client = finnhub.Client(api_key=FINNHUB_API_KEY)
 
 # Path to your XBRL CSV
-XBRL_CSV_PATH = "project/data/organized_sec_xbrl_clean.csv.zip"
+XBRL_CSV_PATH = "project/data/organized_sec_xbrl_clean.zip"
 
 
 epsilon = 10 ** -9
