@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 
 finnhub_client = finnhub.Client(api_key="d4nj2vhr01qk2nuc6b20d4nj2vhr01qk2nuc6b2g")
 
-#get ayears worth of form 4 per company ticker
+#get 10 years worth of form 4 per company ticker
 def form4_pull(tckr_in):
     data = finnhub_client.stock_insider_transactions(f"{tckr_in}", '2014-10-01', '2025-12-01')
     return data
@@ -106,9 +106,3 @@ def db_scan_func(name_in):
     )
 
     return df_in, fig2_in, X_scaled_in
-
-name = name_list[0]
-ins_df, fig2, X_scaled = db_scan_func(name)
-
-# fig2.show()
-# print(ins_df)

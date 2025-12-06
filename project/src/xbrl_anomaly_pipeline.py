@@ -37,9 +37,6 @@ for cik, df  in log_cik_group.items():
 ###################
 #PCA 2D and 3D
 ###################
-
-cik = 320193
-
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
@@ -77,17 +74,19 @@ def clust_up(cik):
     z = coords_3d_in[:,2],
     color = cluster_results["Cluster"]
     )
-    return cluster_results,fig2_in,fig3_in, coords_2d_in, coords_3d_in, X_scaled_in
-_,fig2,fig3,coords_2d, coords_3d, X_scaled  = clust_up(cik)
+    return cluster_results,fig2_in,fig3_in
 
 ##############
 # Isolation Forest
 ##############
-def iso_for(coords_3d_in,cik_in):
+def iso_for(cik_in):
     from sklearn.ensemble import IsolationForest
 
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(log_cik_group[cik_in])
+    iso_X_scaled_in = scaler.fit_transform(log_cik_group[cik_in])
+
+    pca_3d = PCA(n_components=3)
+    coords_3d_in = pca_3d.fit_transform(iso_X_scaled_in)
 
     iso_in = IsolationForest(
         n_estimators=100,
@@ -95,9 +94,9 @@ def iso_for(coords_3d_in,cik_in):
         random_state = 42
     )
 
-    iso_in.fit(X_scaled)
-    anomaly_score = iso_in.decision_function(X_scaled)
-    anomaly_label = iso_in.predict(X_scaled)
+    iso_in.fit(iso_X_scaled_in)
+    anomaly_score = iso_in.decision_function(iso_X_scaled_in)
+    anomaly_label = iso_in.predict(iso_X_scaled_in)
 
     anomaly_results_in = pd.DataFrame({
         "CIK": cik_in,
@@ -117,28 +116,26 @@ def iso_for(coords_3d_in,cik_in):
         title = f"{cik_in} - Isolation Forest Anomalies"
     )
 
-    return fig4, anomaly_results_in, iso_in, X_scaled
-
-fig_if, anomaly_results, iso, X_iso  = iso_for(coords_3d, cik)
+    return fig4, anomaly_results_in, iso_in, iso_X_scaled_in
 
 ###############
 # SHAP
 ###############
 import shap
 
-def shap_explain_if(iso_model_in, X_in, cik_in, n_samples = 200):
+def shap_explain_if(iso_model_in, iso_X_scaled_in, cik_in, n_samples = 200):
 
     #picking a background sample
-    if X_in.shape[0] > n_samples:
-        background = X_in[:n_samples]
+    if iso_X_scaled_in.shape[0] > n_samples:
+        background = iso_X_scaled_in[:n_samples]
     else:
-        background = X_in
+        background = iso_X_scaled_in
 
     #Create SHAP explainer
     explainer = shap.TreeExplainer(iso_model_in)
 
     #Compute contributions for each point
-    shap_values = explainer.shap_values(X_in)
+    shap_values = explainer.shap_values(iso_X_scaled_in)
 
     shap_df = pd.DataFrame(
         shap_values,
@@ -146,10 +143,8 @@ def shap_explain_if(iso_model_in, X_in, cik_in, n_samples = 200):
         columns = log_cik_group[cik_in].columns
     )
 
-    preds = iso_model_in.predict(X_in)
+    preds = iso_model_in.predict(iso_X_scaled_in)
     shap_df["AnomalyLabel"] = preds
     shap_df["CIK"] = cik_in
 
     return shap_df
-
-shap_results = shap_explain_if(iso, X_iso, cik)
